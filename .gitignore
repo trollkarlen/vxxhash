@@ -1,0 +1,44 @@
+# V build artifacts
+*.v~
+*.v~
+*.tmp
+*.tmp.c
+*.tmp.o
+*.tmp.so
+*.tmp.dylib
+*.tmp.dll
+*.tmp.exe
+
+# V module build cache
+.v/
+.vmodules/
+
+# Compiled binaries
+*.exe
+*.app
+*.dll
+*.so
+*.dylib
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test.txt
+*.test
+*.bin
+
+# Documentation build
+docs/_build/
+docs/site/
+
+# Logs
+*.log
