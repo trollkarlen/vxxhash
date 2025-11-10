@@ -51,5 +51,8 @@ test.txt
 docs/_build/
 docs/site/
 
+# Generated documentation
+_docs/
+
 # Logs
 *.log

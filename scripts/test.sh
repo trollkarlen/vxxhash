@@ -164,6 +164,20 @@ check_shared_library() {
     fi
 }
 
+# Check code formatting
+check_formatting() {
+    print_status "Checking code formatting..."
+    if fmt_output=$(v fmt -verify . 2>&1); then
+        print_status "✅ Code formatting is correct"
+    else
+        print_error "❌ Code formatting issues found"
+        print_error "Formatting issues detected:"
+        echo -e "$fmt_output"
+        print_error "Run 'v fmt .' to fix formatting issues"
+        exit 1
+    fi
+}
+
 # Check module compilation
 check_module() {
     print_status "Checking module compilation..."
@@ -249,6 +263,7 @@ main() {
     
     check_v
     check_xxhash
+    check_formatting
     run_tests
     check_shared_library
     check_examples_compilation
