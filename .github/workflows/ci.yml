@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install V language
+      uses: vlang/setup-v@v1.3
+      with:
+        version: latest
+        
+    - name: Install xxHash (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxxhash-dev
+        
+    - name: Install xxHash (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install xxhash
+        
+    - name: Install xxHash (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install xxhash
+        
+    - name: Update xxHash paths (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # Find the installed xxhash version and update paths
+        XXHASH_VERSION=$(ls /usr/local/Cellar/xxhash/ | head -n 1)
+        echo "Found xxhash version: $XXHASH_VERSION"
+        sed -i '' "s|/opt/homebrew/Cellar/xxhash/0.8.3|/usr/local/Cellar/xxhash/$XXHASH_VERSION|g" vxxhash/vxxhash.v
+        
+    - name: Update xxHash paths (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        # Update paths for Ubuntu system installation
+        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
+        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
+        
+    - name: Update xxHash paths (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        # Update paths for Windows chocolatey installation
+        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|C:/ProgramData/chocolatey/lib/xxhash/tools/include|g" vxxhash/vxxhash.v
+        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|C:/ProgramData/chocolatey/lib/xxhash/tools/lib|g" vxxhash/vxxhash.v
+        
+    - name: Check code formatting
+      run: |
+        v fmt -verify .
+        
+    - name: Build shared library
+      run: |
+        v -shared vxxhash
+        
+    - name: Compile examples
+      run: |
+        v examples/hash_example.v
+        v examples/hash_tool.v  
+        v examples/streaming_example.v
+        v examples/benchmark.v
+        
+    - name: Run tests
+      run: |
+        v -stats test .

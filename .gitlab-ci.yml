@@ -1,0 +1,67 @@
+stages:
+  - test
+  - build
+
+variables:
+  CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+  V_HOME: "$CI_PROJECT_DIR/.v"
+
+cache:
+  paths:
+    - .cargo/
+    - .v/
+    - vlang/
+
+.test_template: &test_template
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl build-essential
+    - curl -L https://github.com/vlang/v/releases/latest/download/v_linux.zip -o v_linux.zip
+    - unzip v_linux.zip -d vlang
+    - export VLANG_ROOT=$CI_PROJECT_DIR/vlang
+    - export PATH=$VLANG_ROOT:$PATH
+    - v version
+    
+test:ubuntu:
+  stage: test
+  image: ubuntu:latest
+  <<: *test_template
+  script:
+    - apt-get install -y -qq libxxhash-dev
+    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
+    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
+    - v fmt -verify .
+    - v -stats test .
+
+test:alpine:
+  stage: test
+  image: alpine:latest
+  <<: *test_template
+  script:
+    - apk add --no-cache xxhash-dev
+    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
+    - sed -i "s|/opt/homebrew/Cellar/xx8hash/0.8.3/lib|/usr/lib|g" vxxhash/vxxhash.v
+    - v fmt -verify .
+    - v -shared vxxhash
+    - v examples/hash_example.v
+    - v examples/hash_tool.v  
+    - v examples/streaming_example.v
+    - v examples/benchmark.v
+    - v -stats test .
+
+build:check:
+  stage: build
+  image: ubuntu:latest
+  <<: *test_template
+  script:
+    - apt-get install -y -qq libxxhash-dev
+    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
+    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
+    - v fmt -verify .
+    - v -shared vxxhash
+    - v examples/hash_example.v
+    - v examples/hash_tool.v  
+    - v examples/streaming_example.v
+    - v examples/benchmark.v
+    - v -stats test .
+    - cd vxxhash && v -prod .
+    - echo "Module compilation successful"

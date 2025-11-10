@@ -20,6 +20,17 @@
 *.so
 *.dylib
 
+# Compiled examples
+examples/hash_example
+examples/hash_tool
+examples/streaming_example
+examples/benchmark
+examples/*.exe
+examples/*.app
+examples/*.dll
+examples/*.so
+examples/*.dylib
+
 # IDE files
 .vscode/
 .idea/
