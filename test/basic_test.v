@@ -228,9 +228,9 @@ fn test_xxh3_128_consistency() {
 		one_shot_res := vxxhash.xxh3_128_hash(test_data.bytes(), 0)
 
 		assert stream_res.hash_type == vxxhash.HashType.xxh3_128
-		stream_hash_128 := stream_res.get_hash_128()
-		assert stream_hash_128.low == one_shot_res.low
-		assert stream_hash_128.high == one_shot_res.high
+		stream_hash_128_var := stream_res.get_hash_128()
+		assert stream_hash_128_var.low == one_shot_res.low
+		assert stream_hash_128_var.high == one_shot_res.high
 	}
 
 	println('✓ XXH3-128 consistency test passed')

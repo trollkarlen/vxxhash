@@ -17,9 +17,25 @@
 module vxxhash
 
 // Link flags for xxHash library
-// Note: These paths may need adjustment for different systems
-#flag -I/opt/homebrew/opt/xxhash/include
-#flag -L/opt/homebrew/opt/xxhash/lib
+// Platform-specific paths for xxHash installation
+
+// Windows (chocolatey installation)
+#flag windows -IC:/ProgramData/chocolatey/lib/xxhash/tools/include
+#flag windows -LC:/ProgramData/chocolatey/lib/xxhash/tools/lib
+
+// macOS (Homebrew installation)
+#flag darwin -I/opt/homebrew/opt/xxhash/include
+#flag darwin -L/opt/homebrew/opt/xxhash/lib
+
+// Linux (system package manager)
+#flag linux -I/usr/include
+#flag linux -L/usr/lib/x86_64-linux-gnu
+
+// Fallback for other Unix-like systems
+#flag freebsd -I/usr/local/include
+#flag freebsd -L/usr/local/lib
+
+// Default fallback
 #flag -lxxhash
 
 #include <xxhash.h>

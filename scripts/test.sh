@@ -48,12 +48,7 @@ check_xxhash() {
             print_status "xxHash found via Homebrew"
             XXHASH_PATH=$(brew --prefix xxhash)
             print_status "xxHash path: $XXHASH_PATH"
-            
-            # Update paths in vxxhash.v if needed
-            if grep -q "/opt/homebrew/Cellar/xxhash/0.8.3" vxxhash/vxxhash.v; then
-                print_warning "Updating xxHash paths in vxxhash.v..."
-                sed -i '' "s|/opt/homebrew/Cellar/xxhash/0.8.3|$XXHASH_PATH|g" vxxhash/vxxhash.v
-            fi
+            print_status "✅ Platform-specific flags will handle paths automatically"
         else
             print_error "xxHash not found. Install with: brew install xxhash"
             exit 1
@@ -65,19 +60,14 @@ check_xxhash() {
             XXHASH_CFLAGS=$(pkg-config --cflags libxxhash)
             XXHASH_LIBS=$(pkg-config --libs libxxhash)
             print_status "xxHash flags: $XXHASH_CFLAGS $XXHASH_LIBS"
-            
-            # Update paths for system installation
-            if grep -q "/opt/homebrew/Cellar/xxhash/0.8.3" vxxhash/vxxhash.v; then
-                print_warning "Updating xxHash paths for system installation..."
-                sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
-                sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
-            fi
+            print_status "✅ Platform-specific flags will handle paths automatically"
         else
             print_error "xxHash not found. Install with: sudo apt-get install libxxhash-dev"
             exit 1
         fi
     else
         print_warning "Unknown OS. Please ensure xxHash is installed and paths are correct in vxxhash/vxxhash.v"
+        print_status "✅ Platform-specific flags will handle paths automatically"
     fi
 }
 

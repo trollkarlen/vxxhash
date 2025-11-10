@@ -19,7 +19,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Install V language
-      uses: vlang/setup-v@v1.3
+      uses: vlang/setup-v@v1.4
       with:
         version: latest
         
@@ -39,27 +39,7 @@ jobs:
       run: |
         choco install xxhash
         
-    - name: Update xxHash paths (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        # Find the installed xxhash version and update paths
-        XXHASH_VERSION=$(ls /usr/local/Cellar/xxhash/ | head -n 1)
-        echo "Found xxhash version: $XXHASH_VERSION"
-        sed -i '' "s|/opt/homebrew/Cellar/xxhash/0.8.3|/usr/local/Cellar/xxhash/$XXHASH_VERSION|g" vxxhash/vxxhash.v
-        
-    - name: Update xxHash paths (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        # Update paths for Ubuntu system installation
-        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
-        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
-        
-    - name: Update xxHash paths (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        # Update paths for Windows chocolatey installation
-        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|C:/ProgramData/chocolatey/lib/xxhash/tools/include|g" vxxhash/vxxhash.v
-        sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|C:/ProgramData/chocolatey/lib/xxhash/tools/lib|g" vxxhash/vxxhash.v
+
         
     - name: Check code formatting
       run: |

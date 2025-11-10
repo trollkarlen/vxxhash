@@ -27,8 +27,6 @@ test:ubuntu:
   <<: *test_template
   script:
     - apt-get install -y -qq libxxhash-dev
-    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
-    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
     - v fmt -verify .
     - v -stats test .
 
@@ -38,8 +36,6 @@ test:alpine:
   <<: *test_template
   script:
     - apk add --no-cache xxhash-dev
-    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
-    - sed -i "s|/opt/homebrew/Cellar/xx8hash/0.8.3/lib|/usr/lib|g" vxxhash/vxxhash.v
     - v fmt -verify .
     - v -shared vxxhash
     - v examples/hash_example.v
@@ -54,8 +50,6 @@ build:check:
   <<: *test_template
   script:
     - apt-get install -y -qq libxxhash-dev
-    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/include|/usr/include|g" vxxhash/vxxhash.v
-    - sed -i "s|/opt/homebrew/Cellar/xxhash/0.8.3/lib|/usr/lib/x86_64-linux-gnu|g" vxxhash/vxxhash.v
     - v fmt -verify .
     - v -shared vxxhash
     - v examples/hash_example.v
