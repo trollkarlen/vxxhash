@@ -1,3 +1,22 @@
+// xxHash Streaming vs One-shot Performance Comparison
+//
+// This example demonstrates the performance characteristics and trade-offs between:
+// 1. Streaming hashing: Process data incrementally in chunks
+// 2. One-shot hashing: Process entire data at once
+//
+// Key insights this example provides:
+// - Performance differences between streaming and one-shot approaches
+// - Impact of chunk size on streaming performance
+// - Memory usage patterns of each approach
+// - When to choose streaming vs one-shot for optimal performance
+//
+// Real-world applications:
+// - Streaming: Large file processing, network data, memory-constrained environments
+// - One-shot: Small files, in-memory data, maximum speed when memory is available
+//
+// This example also demonstrates proper resource management and error handling
+// in production scenarios using the vxxhash module.
+
 module main
 
 import os
@@ -101,7 +120,21 @@ fn main() {
 		exit(1)
 	}
 
-	// Test streaming performance
+	// Streaming performance test
+	//
+	// Streaming approach simulates real-world scenarios where:
+	// - Files are too large to load entirely into memory
+	// - Data arrives from network streams or other sources
+	// - Memory usage must be carefully controlled
+	//
+	// Key vxxhash streaming APIs used:
+	// 1. vxxhash.new_xxhasher(): Create streaming hasher with algorithm and seed
+	// 2. hasher.update(): Process data chunks incrementally
+	// 3. hasher.digest(): Finalize hash computation
+	// 4. hasher.free(): Clean up native resources
+	//
+	// The streaming test reads the file directly from disk in chunks,
+	// which is more memory-efficient than loading the entire file first.
 	println('=== Streaming Performance ===')
 	for alg in selected_algorithms {
 		name := alg.name
@@ -112,36 +145,42 @@ fn main() {
 		mut final_hash := u64(0)
 
 		for iter in 0 .. iterations {
+			// Create a new streaming hasher for each iteration
+			// Each hasher maintains its own internal state
 			mut hasher := vxxhash.new_xxhasher(algorithm, 0) or {
 				eprintln('Error creating hasher: ${err}')
 				continue
 			}
-			defer { hasher.free() }
+			defer { hasher.free() } // Critical: prevent memory leaks
 
 			start_time := time.now()
 
-			// Open file and stream in chunks
+			// Open file and stream in chunks (memory-efficient approach)
+			// This avoids loading the entire file into memory at once
 			mut file := os.open(file_path) or {
 				eprintln('Error opening file: ${err}')
 				continue
 			}
-			defer { file.close() }
+			defer { file.close() } // Ensure file handle is closed
 
+			// Read and process file in chunks until EOF
 			for {
 				mut chunk := []u8{len: chunk_size}
 				bytes_read := file.read(mut chunk) or { break }
 
 				if bytes_read == 0 {
-					break
+					break // End of file reached
 				}
 
+				// Feed each chunk to the streaming hasher
+				// The hasher maintains state between update() calls
 				hasher.update(chunk[..bytes_read]) or {
 					eprintln('Error updating hasher: ${err}')
 					break
 				}
 			}
 
-			// Get final hash
+			// Finalize the hash computation after all chunks are processed
 			result := hasher.digest() or {
 				eprintln('Error getting digest: ${err}')
 				continue
@@ -150,6 +189,7 @@ fn main() {
 			duration := time.now() - start_time
 			total_time += u64(duration)
 
+			// Store hash from first iteration for verification
 			if iter == 0 {
 				final_hash = result.get_hash()
 			}
@@ -171,7 +211,20 @@ fn main() {
 		println('')
 	}
 
-	// Test one-shot performance
+	// One-shot performance test
+	//
+	// One-shot approach is optimal when:
+	// - Data fits comfortably in memory
+	// - Maximum speed is required
+	// - Simplicity is preferred over memory efficiency
+	//
+	// Key vxxhash one-shot APIs used:
+	// - vxxhash.xxh32_hash(): Direct 32-bit hash computation
+	// - vxxhash.xxh64_hash(): Direct 64-bit hash computation
+	// - vxxhash.xxh3_hash(): Direct XXH3 hash computation
+	//
+	// These functions take the entire data at once and return the hash directly.
+	// They're typically faster than streaming for the same data size, but use more memory.
 	println('=== One-shot Performance ===')
 	for alg in selected_algorithms {
 		name := alg.name
@@ -182,15 +235,17 @@ fn main() {
 		for iter in 0 .. iterations {
 			start_time := time.now()
 
+			// Use direct one-shot hash functions for maximum speed
+			// Each algorithm has its own optimized function
 			hash := match algorithm {
 				.xxh32 {
-					u64(vxxhash.xxh32_hash(data.bytes(), 0))
+					u64(vxxhash.xxh32_hash(data.bytes(), 0)) // 32-bit hash with seed 0
 				}
 				.xxh64 {
-					vxxhash.xxh64_hash(data.bytes(), 0)
+					vxxhash.xxh64_hash(data.bytes(), 0) // 64-bit hash with seed 0
 				}
 				.xxh3_64 {
-					vxxhash.xxh3_hash(data.bytes(), 0)
+					vxxhash.xxh3_hash(data.bytes(), 0) // XXH3 64-bit hash with seed 0
 				}
 				.xxh3_128 {
 					result := vxxhash.xxh3_hash(data.bytes(), 0) // Use 64-bit for now
@@ -201,6 +256,7 @@ fn main() {
 			duration := time.now() - start_time
 			total_time += u64(duration)
 
+			// Store hash from first iteration for comparison with streaming
 			if iter == 0 {
 				final_hash = hash
 			}

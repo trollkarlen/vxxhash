@@ -73,8 +73,6 @@ fn C.XXH3_128bits_digest(voidptr) C.XXH128_hash_t
 // XXH3 128-bit one-shot function
 fn C.XXH3_128bits_withSeed(voidptr, Size_t, u64) C.XXH128_hash_t
 
-
-
 // DigestAlgorithm represents the available xxHash algorithms
 pub enum DigestAlgorithm {
 	// 32-bit hash algorithm (XXH32)
@@ -124,7 +122,7 @@ pub:
 // HashType represents which algorithm was used to generate the hash
 pub enum HashType {
 	xxh32    // 32-bit xxHash algorithm
-	xxh64    // 64-bit xxHash algorithm  
+	xxh64    // 64-bit xxHash algorithm
 	xxh3_64  // XXH3 64-bit algorithm
 	xxh3_128 // XXH3 128-bit algorithm
 }
@@ -183,9 +181,8 @@ pub fn (h HashResult) get_hash_128() Hash128 {
 
 // Check if hash results are equal
 pub fn (h HashResult) is_equal(other HashResult) bool {
-	return h.hash_type == other.hash_type && 
-		h.hash_128.low == other.hash_128.low && 
-		h.hash_128.high == other.hash_128.high
+	return h.hash_type == other.hash_type && h.hash_128.low == other.hash_128.low
+		&& h.hash_128.high == other.hash_128.high
 }
 
 // Check if hash is zero
@@ -348,47 +345,47 @@ pub fn (h &XXHasher) digest() !HashResult {
 
 	unsafe {
 		match h.algorithm {
-		.xxh32 {
-			hash32 := C.XXH32_digest(h.state)
-			return HashResult{
-				hash_type: .xxh32
-				hash_128: Hash128{
-					low:  u64(hash32)
-					high: 0
+			.xxh32 {
+				hash32 := C.XXH32_digest(h.state)
+				return HashResult{
+					hash_type: .xxh32
+					hash_128:  Hash128{
+						low:  u64(hash32)
+						high: 0
+					}
 				}
 			}
-		}
-		.xxh64 {
-			hash64 := C.XXH64_digest(h.state)
-			return HashResult{
-				hash_type: .xxh64
-				hash_128: Hash128{
-					low:  hash64
-					high: 0
+			.xxh64 {
+				hash64 := C.XXH64_digest(h.state)
+				return HashResult{
+					hash_type: .xxh64
+					hash_128:  Hash128{
+						low:  hash64
+						high: 0
+					}
 				}
 			}
-		}
-		.xxh3_64 {
-			hash64 := C.XXH3_64bits_digest(h.state)
-			return HashResult{
-				hash_type: .xxh3_64
-				hash_128: Hash128{
-					low:  hash64
-					high: 0
+			.xxh3_64 {
+				hash64 := C.XXH3_64bits_digest(h.state)
+				return HashResult{
+					hash_type: .xxh3_64
+					hash_128:  Hash128{
+						low:  hash64
+						high: 0
+					}
 				}
 			}
-		}
-		.xxh3_128 {
-			// Use the proper XXH3 128-bit digest function
-			c_hash128 := C.XXH3_128bits_digest(h.state)
-			return HashResult{
-				hash_type: .xxh3_128
-				hash_128: Hash128{
-					low:  c_hash128.low64
-					high: c_hash128.high64
+			.xxh3_128 {
+				// Use the proper XXH3 128-bit digest function
+				c_hash128 := C.XXH3_128bits_digest(h.state)
+				return HashResult{
+					hash_type: .xxh3_128
+					hash_128:  Hash128{
+						low:  c_hash128.low64
+						high: c_hash128.high64
+					}
 				}
 			}
-		}
 		}
 	}
 }

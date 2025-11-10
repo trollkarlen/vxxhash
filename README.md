@@ -425,6 +425,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Acknowledgments
 
-- [xxHash](https://github.com/Cyan4973/xxHash) by Yann Collet
-- [V Language](https://github.com/vlang/v) community
-- All contributors and testers
+- [xxHash](https://github.com/Cyan4973/xxHash) by Yann Collet - The foundation of this module
+- [V Language](https://github.com/vlang/v) community - For the excellent language and ecosystem
+- **OpenCode** - AI-powered development assistant that helped enhance the documentation and examples with comprehensive comments, usage explanations, and best practices. OpenCode assisted in creating detailed API documentation, learning paths, and real-world use case scenarios to make the vxxhash module more accessible and well-documented.
+- All contributors and testers for their valuable feedback and improvements

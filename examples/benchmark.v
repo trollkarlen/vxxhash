@@ -1,3 +1,19 @@
+// xxHash Performance Benchmark Tool
+//
+// This example demonstrates comprehensive usage of the vxxhash module for performance testing.
+// It shows both one-shot hashing (entire data at once) and streaming hashing (data in chunks).
+//
+// Key vxxhash features demonstrated:
+// - Multiple hash algorithms: xxh32, xxh64, xxh3_64, xxh3_128
+// - One-shot hash functions for simple use cases
+// - Streaming hasher for large files or memory-constrained scenarios
+// - Performance optimization through chunk size tuning
+//
+// Use cases for different approaches:
+// - One-shot: Best for small to medium files that fit in memory
+// - Streaming: Essential for large files, network streams, or memory-limited environments
+// - Chunk optimization: Critical for achieving maximum throughput in streaming scenarios
+
 module main
 
 import os
@@ -5,7 +21,9 @@ import cli
 import time
 import vxxhash
 
-// Format time in ns if < 100000ns (0.1ms), otherwise in ms with 2 decimals
+// format_time formats execution time for human readability
+// Shows nanoseconds for very fast operations (< 0.1ms) and milliseconds for slower ones
+// This helps users understand the performance characteristics at different scales
 fn format_time(time_ns f64) string {
 	if time_ns < 100000 { // < 0.1ms
 		return '${time_ns:0.0} ns'
@@ -14,7 +32,9 @@ fn format_time(time_ns f64) string {
 	}
 }
 
-// Format bytes in human readable format
+// format_bytes converts byte counts to human-readable units
+// Essential for displaying file sizes and chunk sizes in an intuitive way
+// Helps users understand the scale of data being processed
 fn format_bytes(bytes f64) string {
 	if bytes < 1024 {
 		return '${bytes:0.0} B'
@@ -49,13 +69,30 @@ fn format_throughput(throughput f64) string {
 	}
 }
 
+// ChunkResult stores performance metrics for each chunk size tested
+// Used to analyze and compare the performance characteristics of different chunk sizes
+// This data helps identify the optimal chunk size for maximum throughput
 struct ChunkResult {
-	chunk_size int
-	avg_time   f64
-	throughput f64
+	chunk_size int // Size of data chunks processed in each iteration
+	avg_time   f64 // Average time taken to hash the entire file with this chunk size
+	throughput f64 // Data processing rate in MB/s or GB/s
 }
 
-// Find optimal chunk size for streaming
+// find_optimal_chunk_size determines the best chunk size for streaming hash operations
+//
+// Why chunk size matters:
+// - Too small: Excessive function call overhead, poor performance
+// - Too large: Memory inefficiency, cache misses, potential memory pressure
+// - Just right: Balances function call overhead with memory efficiency for maximum throughput
+//
+// This function tests various chunk sizes and recommends the optimal one based on:
+// 1. Raw performance (fastest execution time)
+// 2. Memory efficiency (prefers smaller chunks with similar performance)
+//
+// The vxxhash streaming interface is used here to simulate real-world scenarios where:
+// - Files are too large to fit in memory
+// - Data arrives from network streams
+// - Memory usage must be controlled
 fn find_optimal_chunk_size(data []u8, algorithm vxxhash.DigestAlgorithm, iterations int, file_path string, algorithm_name string) !int {
 	file_size := f64(data.len)
 	println('=== Finding Optimal Chunk Size ===')
@@ -109,26 +146,36 @@ fn find_optimal_chunk_size(data []u8, algorithm vxxhash.DigestAlgorithm, iterati
 		mut times := []u64{cap: iterations}
 
 		for i := 0; i < iterations; i++ {
+			// Create a new streaming hasher for each iteration
+			// vxxhash.new_xxhasher() creates a hasher instance that can process data incrementally
+			// The seed (0) ensures reproducible results across runs
 			mut hasher := vxxhash.new_xxhasher(algorithm, 0) or {
 				eprintln('Error creating hasher: ${err}')
 				continue
 			}
-			defer { hasher.free() }
+			defer { hasher.free() } // Clean up resources to prevent memory leaks
 
 			start_time := time.now()
 
-			// Process in chunks
+			// Process data in chunks to simulate streaming scenarios
+			// This is the core of streaming hashing: breaking large data into manageable pieces
+			// Each chunk is processed independently but contributes to the final hash
 			for j := 0; j < data.len; j += chunk_size {
 				mut end := j + chunk_size
 				if end > data.len {
 					end = data.len
 				}
+				// hasher.update() feeds data to the streaming hasher
+				// This method can be called multiple times with different data chunks
+				// The hasher maintains internal state between calls
 				hasher.update(data[j..end]) or {
 					eprintln('Error updating hasher: ${err}')
 					break
 				}
 			}
 
+			// hasher.digest() finalizes the hash computation and returns the result
+			// After calling digest(), the hasher is reset and can be reused or freed
 			hasher.digest() or {
 				eprintln('Error getting digest: ${err}')
 				continue
@@ -148,11 +195,11 @@ fn find_optimal_chunk_size(data []u8, algorithm vxxhash.DigestAlgorithm, iterati
 
 		results << ChunkResult{
 			chunk_size: chunk_size
-			avg_time: avg_time
+			avg_time:   avg_time
 			throughput: throughput
 		}
 
-chunk_str := format_bytes_table(f64(chunk_size))
+		chunk_str := format_bytes_table(f64(chunk_size))
 		time_str := format_time(avg_time)
 		throughput_str := format_throughput(throughput)
 
@@ -250,11 +297,11 @@ fn main() {
 				default_value: ['5']
 			},
 		]
-		commands: [
+		commands:    [
 			cli.Command{
 				name:        'find-best-chunk'
 				description: 'Test chunk sizes from 4KB to 8MB to find optimal performance'
-				flags: [
+				flags:       [
 					cli.Flag{
 						name:        'file'
 						abbrev:      'f'
@@ -295,7 +342,7 @@ fn main() {
 // Run normal benchmark mode
 fn run_normal_benchmark(app cli.Command) ! {
 	file_path := app.flags.get_string('file') or { '' }
-	
+
 	// Validate arguments with proper error messages
 	if file_path == '' {
 		eprintln('Error: File path is required')
@@ -353,9 +400,9 @@ fn run_normal_benchmark(app cli.Command) ! {
 
 	// Parse algorithms
 	struct Algorithm {
-		name      string
-		algorithm vxxhash.DigestAlgorithm
-		hash_fn   fn ([]u8) u64 = unsafe { nil }
+		name        string
+		algorithm   vxxhash.DigestAlgorithm
+		hash_fn     fn ([]u8) u64             = unsafe { nil }
 		hash_fn_128 fn ([]u8) vxxhash.Hash128 = unsafe { nil }
 	}
 
@@ -381,7 +428,7 @@ fn run_normal_benchmark(app cli.Command) ! {
 		if algo_name.len == 0 {
 			continue
 		}
-		
+
 		mut found := false
 		for alg in algorithms {
 			if alg.name == algo_name {
@@ -390,7 +437,7 @@ fn run_normal_benchmark(app cli.Command) ! {
 				break
 			}
 		}
-		
+
 		if !found {
 			invalid_algos << algo_name
 		}
@@ -588,7 +635,7 @@ fn run_normal_benchmark(app cli.Command) ! {
 // Run find-best-chunk subcommand
 fn run_find_best_chunk(cmd cli.Command) ! {
 	file_path := cmd.flags.get_string('file') or { '' }
-	
+
 	if file_path == '' {
 		eprintln('Error: File path is required')
 		eprintln('Usage: v run benchmark.v find-best-chunk -f <file> [options]')
@@ -615,23 +662,31 @@ fn run_find_best_chunk(cmd cli.Command) ! {
 		eprintln('Error: Invalid algorithms value: ${err}')
 		exit(1)
 	}
-	
+
 	// Parse algorithms (simplified - just use first one)
 	algo_name := algorithms_str.split(',')[0].trim_space()
-	
+
 	mut algorithm := vxxhash.DigestAlgorithm.xxh3_64
 	match algo_name {
-		'xxh32' { algorithm = .xxh32 }
-		'xxh64' { algorithm = .xxh64 }
-		'xxh3_64' { algorithm = .xxh3_64 }
-		'xxh3_128' { algorithm = .xxh3_128 }
+		'xxh32' {
+			algorithm = .xxh32
+		}
+		'xxh64' {
+			algorithm = .xxh64
+		}
+		'xxh3_64' {
+			algorithm = .xxh3_64
+		}
+		'xxh3_128' {
+			algorithm = .xxh3_128
+		}
 		else {
 			eprintln('Error: Unknown algorithm: ${algo_name}')
 			eprintln('Available algorithms: xxh32, xxh64, xxh3_64, xxh3_128')
 			exit(1)
 		}
 	}
-	
+
 	// Run find-best-chunk logic
 	data := os.read_file(file_path)!
 	find_optimal_chunk_size(data.bytes(), algorithm, iterations, file_path, algo_name)!

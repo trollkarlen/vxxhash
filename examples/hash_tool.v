@@ -1,3 +1,24 @@
+// vxxhash Command-line Tool
+//
+// A practical command-line tool demonstrating real-world usage of the vxxhash module.
+// This tool shows how to build production applications using xxHash for:
+// - File integrity verification
+// - Content deduplication
+// - Performance benchmarking
+// - Data comparison and validation
+//
+// Features demonstrated:
+// 1. Multiple hash algorithms with user selection
+// 2. Custom seed support for reproducible hashes
+// 3. Performance comparison between algorithms
+// 4. Proper error handling and user feedback
+// 5. Command-line interface design patterns
+//
+// This tool can be used as:
+// - A drop-in replacement for md5sum/sha1sum for faster hashing
+// - A benchmarking tool for algorithm selection
+// - A reference implementation for integrating vxxhash into other applications
+
 module main
 
 import os
@@ -66,6 +87,23 @@ fn main() {
 	app.parse(os.args)
 }
 
+// hash_file implements the core hashing functionality
+//
+// This function demonstrates:
+// - Algorithm selection using pattern matching
+// - Custom seed support for reproducible hashing
+// - Performance timing and reporting
+// - Error handling for file operations
+//
+// vxxhash APIs demonstrated:
+// - vxxhash.xxh32_hash(): 32-bit hash with custom seed
+// - vxxhash.xxh64_hash(): 64-bit hash with custom seed
+// - vxxhash.xxh3_hash(): XXH3 hash with custom seed
+//
+// The seed parameter is important for:
+// - Creating different hash outputs for the same data
+// - Versioning or salting hashes
+// - Avoiding hash collisions in specific scenarios
 fn hash_file(cmd cli.Command) ! {
 	algorithm_str := cmd.flags.get_string('algorithm') or { 'xxh3_64' }
 	seed := u64(cmd.flags.get_int('seed') or { 0 })
@@ -85,26 +123,32 @@ fn hash_file(cmd cli.Command) ! {
 
 	start_time := time.now()
 
+	// Use pattern matching to select the appropriate vxxhash algorithm
+	// Each algorithm takes the same parameters: data and seed
 	match algorithm_str {
 		'xxh32' {
+			// 32-bit hash: Fast, good for hash tables, legacy compatibility
 			hash := vxxhash.xxh32_hash(data.bytes(), seed)
 			duration := time.now() - start_time
 			println('XXH32 Hash: ${hash:x}')
 			println('Time taken: ${format_duration(duration)}')
 		}
 		'xxh64' {
+			// 64-bit hash: Very fast, excellent for general purpose use
 			hash := vxxhash.xxh64_hash(data.bytes(), seed)
 			duration := time.now() - start_time
 			println('XXH64 Hash: ${hash:x}')
 			println('Time taken: ${format_duration(duration)}')
 		}
 		'xxh3_64' {
+			// XXH3 64-bit: Fastest on modern CPUs, recommended for new code
 			hash := vxxhash.xxh3_hash(data.bytes(), seed)
 			duration := time.now() - start_time
 			println('XXH3-64 Hash: ${hash:x}')
 			println('Time taken: ${format_duration(duration)}')
 		}
 		'xxh3_128' {
+			// XXH3 128-bit: Highest quality, good for collision resistance
 			hash := vxxhash.xxh3_hash(data.bytes(), seed) // Use 64-bit for now
 			duration := time.now() - start_time
 			println('XXH3-128 Hash: ${hash:x}')
@@ -116,6 +160,19 @@ fn hash_file(cmd cli.Command) ! {
 	}
 }
 
+// benchmark_file compares performance of all xxHash algorithms
+//
+// This function demonstrates:
+// - Performance testing methodology
+// - Function pointer usage for algorithm abstraction
+// - Statistical analysis (averaging over multiple iterations)
+// - Throughput calculation and reporting
+//
+// The benchmark helps users choose the best algorithm for their use case:
+// - XXH32: Fastest, but 32-bit (more collisions)
+// - XXH64: Excellent speed/quality trade-off
+// - XXH3-64: Fastest on modern CPUs
+// - XXH3-128: Highest quality, slightly slower
 fn benchmark_file(cmd cli.Command) ! {
 	file_path := cmd.flags.get_string('file')!
 	iterations_str := cmd.flags.get_string('iterations') or { '100' }
@@ -133,6 +190,8 @@ fn benchmark_file(cmd cli.Command) ! {
 	println('Iterations: ${iterations}')
 	println('')
 
+	// Define algorithm test cases using function pointers
+	// This pattern allows uniform testing of different algorithms
 	struct Algorithm {
 		name    string
 		hash_fn fn ([]u8, u64) u64 = unsafe { nil }
