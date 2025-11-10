@@ -73,7 +73,8 @@ fn main() {
     hasher.update("World!".bytes())!
     
     result := hasher.digest()!
-    println("Streaming: ${result.hash_64:x}")
+    println("Streaming: ${result.get_hash():x}")
+    println("Hex: ${result.hex()}")
 }
 ```
 
@@ -131,15 +132,15 @@ fn main() {
     
     // Get results
     result := hasher.digest()!
-    println("32-bit:  ${result.hash_32:x}")
-    println("64-bit:  ${result.hash_64:x}")
-    println("128-bit: ${result.hex_128()}")
+    println("Type:     ${result.type()}")
+    println("Hash:     ${result.get_hash():x}")
+    println("Hex:      ${result.hex()}")
     
     // Reuse hasher for new data
     hasher.reset()!
     hasher.update("New data".bytes())!
     new_result := hasher.digest()!
-    println("New hash: ${new_result.hash_64:x}")
+    println("New hash: ${new_result.get_hash():x}")
 }
 ```
 
@@ -182,15 +183,15 @@ fn main() {
     data := "test data".bytes()
     
     // Get structured result for comparison
-    result1 := vxxhash.new_xxhasher_default(.xxh3_64) or { panic(err) }
-    defer { result1.free() }
-    result1.update(data)!
-    hash1 := result1.digest()!
+    mut hasher1 := vxxhash.new_xxhasher_default(.xxh3_64) or { panic(err) }
+    defer { hasher1.free() }
+    hasher1.update(data)!
+    hash1 := hasher1.digest()!
     
-    result2 := vxxhash.new_xxhasher_default(.xxh3_64) or { panic(err) }
-    defer { result2.free() }
-    result2.update(data)!
-    hash2 := result2.digest()!
+    mut hasher2 := vxxhash.new_xxhasher_default(.xxh3_64) or { panic(err) }
+    defer { hasher2.free() }
+    hasher2.update(data)!
+    hash2 := hasher2.digest()!
     
     // Compare results
     if hash1 == hash2 {
@@ -198,12 +199,14 @@ fn main() {
     }
     
     // Check specific parts
-    if hash1.equals_64(hash2) {
-        println("64-bit hashes match")
+    if hash1.is_equal(hash2) {
+        println("Hashes are equal")
     }
     
     // String representation
-    println("Full result: ${hash1}")
+    println("Hash 1: ${hash1.hex()}")
+    println("Hash 2: ${hash2.hex()}")
+    println("Type: ${hash1.type()}")
 }
 ```
 
@@ -232,13 +235,14 @@ mut:
 ```
 
 #### `HashResult`
-Unified digest result containing all hash formats:
+Unified digest result containing hash value with type information:
 ```v
 pub struct HashResult {
 pub:
-    hash_32  u32     // 32-bit hash value
-    hash_64  u64     // 64-bit hash value
-    hash_128 Hash128 // 128-bit hash value
+    hash_type HashType // Which algorithm generated this hash
+    hash_128  Hash128  // Hash value storage
+    // For xxh32/xxh64/xxh3_64: hash_128.low contains the hash, hash_128.high = 0
+    // For xxh3_128: hash_128 contains the full 128-bit hash
 }
 ```
 
@@ -298,21 +302,32 @@ fn (mut h XXHasher) free()
 
 ### HashResult Methods
 
+#### Type Information
+```v
+fn (h HashResult) type() HashType           // Get hash algorithm type
+fn (h HashResult) is_xxh32() bool           // Check if XXH32 algorithm
+fn (h HashResult) is_xxh64() bool           // Check if XXH64 algorithm
+fn (h HashResult) is_xxh3_64() bool         // Check if XXH3-64 algorithm
+fn (h HashResult) is_xxh3_128() bool        // Check if XXH3-128 algorithm
+```
+
+#### Hash Access
+```v
+fn (h HashResult) get_hash() u64             // Get primary hash value
+fn (h HashResult) get_hash_128() Hash128     // Get 128-bit hash value
+fn (h HashResult) hex() string               // Get hash as hex string
+```
+
 #### Comparison
 ```v
-fn (h HashResult) is_equal(other HashResult) bool
-fn (h HashResult) equals_32(other HashResult) bool
-fn (h HashHash) equals_64(other HashResult) bool
-fn (h HashResult) equals_128(other HashResult) bool
-fn (h HashResult) == (other HashResult) bool  // Operator overload
+fn (h HashResult) is_equal(other HashResult) bool  // Check if hashes are equal
+fn (h HashResult) == (other HashResult) bool       // Operator overload
 ```
 
 #### Utilities
 ```v
-fn (h HashResult) is_zero() bool
-fn (h HashResult) is_zero_128() bool
-fn (h HashResult) hex_128() string
-fn (h HashResult) str() string
+fn (h HashResult) is_zero() bool             // Check if hash is zero
+fn (h HashResult) str() string               // String representation
 ```
 
 ### Library Information

@@ -56,14 +56,14 @@ fn test_xxhasher_xxh32_streaming() {
 
 	result := hasher.digest() or { panic(err) }
 	assert result.hash_type == vxxhash.HashType.xxh32
-	assert result.hash_128.low == 0x4007de50
+	assert result.get_hash() == 0x4007de50
 
 	// Test reset
 	hasher.reset() or { panic(err) }
 	hasher.update('Hello, World!'.bytes()) or { panic(err) }
 	result2 := hasher.digest() or { panic(err) }
 	assert result2.hash_type == result.hash_type
-	assert result2.hash_128.low == result.hash_128.low
+	assert result2.get_hash() == result.get_hash()
 }
 
 fn test_xxhasher_xxh64_streaming() {
@@ -78,14 +78,14 @@ fn test_xxhasher_xxh64_streaming() {
 
 	result := hasher.digest() or { panic(err) }
 	assert result.hash_type == vxxhash.HashType.xxh64
-	assert result.hash_128.low == 0xc49aacf8080fe47f
+	assert result.get_hash() == 0xc49aacf8080fe47f
 
 	// Test reset
 	hasher.reset() or { panic(err) }
 	hasher.update('Hello, World!'.bytes()) or { panic(err) }
 	result2 := hasher.digest() or { panic(err) }
 	assert result2.hash_type == result.hash_type
-	assert result2.hash_128.low == result.hash_128.low
+	assert result2.get_hash() == result.get_hash()
 }
 
 fn test_xxhasher_xxh3_64_streaming() {
@@ -100,14 +100,14 @@ fn test_xxhasher_xxh3_64_streaming() {
 
 	result := hasher.digest() or { panic(err) }
 	assert result.hash_type == vxxhash.HashType.xxh3_64
-	assert result.hash_128.low == 0x60415d5f616602aa
+	assert result.get_hash() == 0x60415d5f616602aa
 
 	// Test reset
 	hasher.reset() or { panic(err) }
 	hasher.update('Hello, World!'.bytes()) or { panic(err) }
 	result2 := hasher.digest() or { panic(err) }
 	assert result2.hash_type == result.hash_type
-	assert result2.hash_128.low == result.hash_128.low
+	assert result2.get_hash() == result.get_hash()
 }
 
 fn test_xxh3_128_one_shot() {
@@ -147,19 +147,20 @@ fn test_xxhasher_xxh3_128_streaming() {
 
 	// Verify hash type and 128-bit result
 	assert result.hash_type == vxxhash.HashType.xxh3_128
-	assert result.hash_128.low != 0 || result.hash_128.high != 0
+	hash_128 := result.get_hash_128()
+	assert hash_128.low != 0 || hash_128.high != 0
 
 	// Compare with one-shot result
 	one_shot := vxxhash.xxh3_128_hash('Hello, World!'.bytes(), 0)
-	assert result.hash_128.low == one_shot.low && result.hash_128.high == one_shot.high
+	assert hash_128.low == one_shot.low && hash_128.high == one_shot.high
 
 	// Test reset
 	hasher.reset() or { panic(err) }
 	hasher.update('Hello, World!'.bytes()) or { panic(err) }
 	result2 := hasher.digest() or { panic(err) }
 	assert result2.hash_type == result.hash_type
-	assert result2.hash_128.low == result.hash_128.low
-		&& result2.hash_128.high == result.hash_128.high
+	hash_128_2 := result2.get_hash_128()
+	assert hash_128_2.low == hash_128.low && hash_128_2.high == hash_128.high
 
 	println('✓ XXH3-128 streaming test passed')
 }
@@ -209,8 +210,9 @@ fn test_xxh3_128_consistency() {
 	one_shot := vxxhash.xxh3_128_hash(data.bytes(), seed)
 
 	assert stream_result.hash_type == vxxhash.HashType.xxh3_128
-	assert stream_result.hash_128.low == one_shot.low
-	assert stream_result.hash_128.high == one_shot.high
+	stream_hash_128 := stream_result.get_hash_128()
+	assert stream_hash_128.low == one_shot.low
+	assert stream_hash_128.high == one_shot.high
 
 	// Test with different data sizes
 	small_data := 'hi'
@@ -226,8 +228,9 @@ fn test_xxh3_128_consistency() {
 		one_shot_res := vxxhash.xxh3_128_hash(test_data.bytes(), 0)
 
 		assert stream_res.hash_type == vxxhash.HashType.xxh3_128
-		assert stream_res.hash_128.low == one_shot_res.low
-		assert stream_res.hash_128.high == one_shot_res.high
+		stream_hash_128 := stream_res.get_hash_128()
+		assert stream_hash_128.low == one_shot_res.low
+		assert stream_hash_128.high == one_shot_res.high
 	}
 
 	println('✓ XXH3-128 consistency test passed')

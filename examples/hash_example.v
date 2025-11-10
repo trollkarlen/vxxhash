@@ -135,7 +135,7 @@ fn main() {
 	}
 
 	// Get the final hash result in multiple formats
-	stream_result := hasher.digest() or { panic(err) } // Hash object
+	stream_result := hasher.digest() or { panic(err) } // HashResult object
 	stream_hex := hasher.digest_hex() or { panic(err) } // Hex string
 	one_shot_hex := vxxhash.xxh3_hash_hex_default(data.bytes()) // For comparison
 
@@ -144,4 +144,5 @@ fn main() {
 	println('Match:       ${stream_hex == one_shot_hex}') // Should always be true
 	println('Hash result:  ${stream_result.get_hash():x}') // Raw hash value
 	println('Hash type:    ${stream_result.type()}') // Algorithm information
+	println('Hash hex:     ${stream_result.hex()}') // Formatted hex string
 }
