@@ -20,7 +20,7 @@ cache:
     - export VLANG_ROOT=$CI_PROJECT_DIR/vlang
     - export PATH=$VLANG_ROOT:$PATH
     - v version
-    
+
 test:ubuntu:
   stage: test
   image: ubuntu:latest
@@ -28,7 +28,27 @@ test:ubuntu:
   script:
     - apt-get install -y -qq libxxhash-dev
     - v fmt -verify .
-    - v -stats test .
+    - v -stats test test/
+
+test:windows:
+  stage: test
+  image: registry.gitlab.com/gitlab-org/windows-runner:win1909
+  tags:
+    - windows
+  before_script:
+    - curl -L https://github.com/msys2/msys2-installer/releases/download/2023-05-26/msys2-x86_64-20230526.exe -o msys2-installer.exe
+    - start /wait msys2-installer.exe --accept-licenses --confirm-command --root C:/msys64
+    - C:/msys64/usr/bin/bash -lc "pacman -Syu --noconfirm"
+    - C:/msys64/usr/bin/bash -lc "pacman -S --noconfirm mingw-w64-x86_64-xxhash mingw-w64-x86_64-gcc mingw-w64-x86_64-make"
+    - curl -L https://github.com/vlang/v/releases/latest/download/v_windows.zip -o v_windows.zip
+    - unzip v_windows.zip -d vlang
+    - export VLANG_ROOT=$CI_PROJECT_DIR/vlang
+    - export PATH=$VLANG_ROOT:C:/msys64/mingw64/bin:C:/msys64/usr/bin:$PATH
+    - v version
+  script:
+    # fmt does not work on wondows
+    # - v fmt -verify .
+    - v -stats test test/
 
 test:alpine:
   stage: test
@@ -39,10 +59,10 @@ test:alpine:
     - v fmt -verify .
     - v -shared vxxhash
     - v examples/hash_example.v
-    - v examples/hash_tool.v  
+    - v examples/hash_tool.v
     - v examples/streaming_example.v
     - v examples/benchmark.v
-    - v -stats test .
+    - v -stats test test/
 
 build:check:
   stage: build
@@ -53,9 +73,9 @@ build:check:
     - v fmt -verify .
     - v -shared vxxhash
     - v examples/hash_example.v
-    - v examples/hash_tool.v  
+    - v examples/hash_tool.v
     - v examples/streaming_example.v
     - v examples/benchmark.v
-    - v -stats test .
+    - v -stats test test/
     - cd vxxhash && v -prod .
     - echo "Module compilation successful"

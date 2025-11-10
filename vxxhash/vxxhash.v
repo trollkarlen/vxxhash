@@ -19,9 +19,9 @@ module vxxhash
 // Link flags for xxHash library
 // Platform-specific paths for xxHash installation
 
-// Windows (chocolatey installation)
-#flag windows -IC:/ProgramData/chocolatey/lib/xxhash/tools/include
-#flag windows -LC:/ProgramData/chocolatey/lib/xxhash/tools/lib
+// Windows (MinGW/MSYS2 installation)
+#flag windows -IC/msys64/mingw64/include
+#flag windows -LC/msys64/mingw64/lib
 
 // macOS (Homebrew installation)
 #flag darwin -I/opt/homebrew/opt/xxhash/include
@@ -507,9 +507,9 @@ pub fn new_xxhasher(algorithm DigestAlgorithm, seed u64) !XXHasher {
 //   - Data must be valid for the duration of the call
 //   - Very large chunks (> 2GB) may cause issues on some systems
 pub fn (mut h XXHasher) update(data []u8) ! {
-    if h.state == unsafe { nil } {
-        return error('Hasher not initialized')
-    }
+	if h.state == unsafe { nil } {
+		return error('Hasher not initialized')
+	}
 
 	unsafe {
 		match h.algorithm {
