@@ -8,29 +8,59 @@ import vxxhash
 // Format time in ns if < 100000ns (0.1ms), otherwise in ms with 2 decimals
 fn format_time(time_ns f64) string {
 	if time_ns < 100000 { // < 0.1ms
-		return '${time_ns:0.0}ns'
+		return '${time_ns:0.0} ns'
 	} else {
-		return '${time_ns / 1000000:.2}ms'
+		return '${time_ns / 1000000:.2} ms'
 	}
 }
 
 // Format bytes in human readable format
 fn format_bytes(bytes f64) string {
 	if bytes < 1024 {
-		return '${bytes:0.0}B'
+		return '${bytes:0.0} B'
 	} else if bytes < 1024 * 1024 {
-		return '${bytes / 1024:.1f}KB'
+		return '${bytes / 1024:.1f} KB'
 	} else if bytes < 1024 * 1024 * 1024 {
-		return '${bytes / (1024 * 1024):.1f}MB'
+		return '${bytes / (1024 * 1024):.1f} MB'
 	} else {
-		return '${bytes / (1024 * 1024 * 1024):.1f}GB'
+		return '${bytes / (1024 * 1024 * 1024):.1f} GB'
 	}
+}
+
+// Format bytes for table display (right-aligned with consistent width)
+fn format_bytes_table(bytes f64) string {
+	if bytes < 1024 {
+		return '${bytes:8.0f} B'
+	} else if bytes < 1024 * 1024 {
+		return '${bytes / 1024:7.1f} KB'
+	} else if bytes < 1024 * 1024 * 1024 {
+		return '${bytes / (1024 * 1024):7.1f} MB'
+	} else {
+		return '${bytes / (1024 * 1024 * 1024):7.1f} GB'
+	}
+}
+
+// Format throughput in appropriate unit (MB/s or GB/s)
+fn format_throughput(throughput f64) string {
+	if throughput >= 1000 {
+		return '${throughput / 1024:.2f} GB/s'
+	} else {
+		return '${throughput:.2f} MB/s'
+	}
+}
+
+struct ChunkResult {
+	chunk_size int
+	avg_time   f64
+	throughput f64
 }
 
 // Find optimal chunk size for streaming
 fn find_optimal_chunk_size(data []u8, algorithm vxxhash.DigestAlgorithm, iterations int, file_path string, algorithm_name string) !int {
+	file_size := f64(data.len)
 	println('=== Finding Optimal Chunk Size ===')
 	println('File: ${file_path}')
+	println('Size: ${file_size} bytes (${file_size / 1024.0 / 1024.0:.2} MB)')
 	println('Algorithm: ${algorithm_name}')
 	println('Running ${iterations} iterations per chunk size')
 	println('')
@@ -65,17 +95,15 @@ fn find_optimal_chunk_size(data []u8, algorithm vxxhash.DigestAlgorithm, iterati
 
 	if chunk_sizes.len > 0 {
 		last_idx := chunk_sizes.len - 1
-		println('Testing ${chunk_sizes.len} chunk sizes from ${format_bytes(f64(chunk_sizes[0]))} to ${format_bytes(f64(chunk_sizes[last_idx]))}')
+		println('Testing ${chunk_sizes.len} chunk sizes from ${format_bytes_table(f64(chunk_sizes[0]))} to ${format_bytes_table(f64(chunk_sizes[last_idx]))}')
 	} else {
 		println('No valid chunk sizes to test')
 		return data.len
 	}
-	println('Chunk Size | Avg Time | Throughput (MB/s)')
-	println('-----------|----------|-------------------')
+	println('Chunk Size | Avg Time | Throughput')
+	println('-----------|----------|-----------')
 
-	mut best_chunk_size := chunk_sizes[0]
-	mut best_throughput := 0.0
-	file_size := f64(data.len)
+	mut results := []ChunkResult{}
 
 	for chunk_size in chunk_sizes {
 		mut times := []u64{cap: iterations}
@@ -118,26 +146,66 @@ fn find_optimal_chunk_size(data []u8, algorithm vxxhash.DigestAlgorithm, iterati
 		avg_time := f64(total_time) / f64(iterations)
 		throughput := (file_size / 1024.0 / 1024.0) / (avg_time / 1000000000.0)
 
-		chunk_str := format_bytes(f64(chunk_size))
-		time_str := format_time(avg_time)
-
-		// Mark the best performing chunk size with an asterisk
-		mut marker := ''
-		if throughput > best_throughput {
-			best_throughput = throughput
-			best_chunk_size = chunk_size
-			marker = ' *'
+		results << ChunkResult{
+			chunk_size: chunk_size
+			avg_time: avg_time
+			throughput: throughput
 		}
 
-		println('${chunk_str:-10} | ${time_str:8} | ${throughput:17.2}${marker}')
+chunk_str := format_bytes_table(f64(chunk_size))
+		time_str := format_time(avg_time)
+		throughput_str := format_throughput(throughput)
+
+		println('${chunk_str} | ${time_str:8} | ${throughput_str:17}')
+	}
+
+	// Sort results by average time (fastest first)
+	results.sort(|a, b| a.avg_time < b.avg_time)
+
+	// Find the best result
+	best_result := results[0]
+	mut recommended_chunk := best_result.chunk_size
+	mut recommendation_note := ''
+
+	// Check if there are smaller chunks with nearly the same performance (within 2%)
+	for result in results {
+		if result.chunk_size < best_result.chunk_size {
+			performance_diff := (best_result.avg_time - result.avg_time) / best_result.avg_time
+			if performance_diff <= 0.02 { // Within 2% performance difference
+				recommended_chunk = result.chunk_size
+				recommendation_note = ' (recommended: smaller chunk with similar performance)'
+				break
+			}
+		}
 	}
 
 	println('')
-	println('🏆 Optimal chunk size: ${format_bytes(f64(best_chunk_size))} (${best_throughput:.2} MB/s)')
-	println('   * This chunk size performed best in the test above')
+	println('🏆 Results ordered by performance (fastest first):')
+	for i, result in results {
+		chunk_str := format_bytes_table(f64(result.chunk_size))
+		time_str := format_time(result.avg_time)
+		mut marker := ''
+		if result.chunk_size == best_result.chunk_size {
+			marker = ' 🏆'
+		}
+		if result.chunk_size == recommended_chunk && result.chunk_size != best_result.chunk_size {
+			marker = ' ⭐'
+		}
+		throughput_str := format_throughput(result.throughput)
+		println('${i + 1:2}. ${chunk_str} | ${time_str:8} | ${throughput_str:17}${marker}')
+	}
+
+	println('')
+	if recommended_chunk == best_result.chunk_size {
+		println('🏆 Optimal chunk size: ${format_bytes(f64(recommended_chunk))} (${format_throughput(best_result.throughput)})')
+		println('   * This chunk size performed best in the test above')
+	} else {
+		println('🏆 Fastest chunk size: ${format_bytes(f64(best_result.chunk_size))} (${format_throughput(best_result.throughput)})')
+		println('⭐ Recommended chunk size: ${format_bytes(f64(recommended_chunk))} (${format_throughput(results.filter(it.chunk_size == recommended_chunk)[0].throughput)})${recommendation_note}')
+	}
 	println('')
 
-	return best_chunk_size
+	return recommended_chunk
 }
 
 fn main() {
