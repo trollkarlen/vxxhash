@@ -9,6 +9,7 @@ module vxxhash
 type Size_t = u64
 
 // C function declarations
+fn C.XXH_versionNumber() u32
 fn C.XXH32(voidptr, Size_t, u32) u32
 fn C.XXH64(voidptr, Size_t, u64) u64
 fn C.XXH3_64bits_withSeed(voidptr, Size_t, u64) u64
@@ -46,6 +47,7 @@ mut:
 }
 
 pub struct Hash128 {
+pub:
     low  u64
     high u64
 }
@@ -55,6 +57,62 @@ pub:
     hash_32  u32
     hash_64  u64
     hash_128 Hash128
+}
+
+// HashResult comparison methods
+
+// Check if all hash values are equal
+pub fn (h HashResult) is_equal(other HashResult) bool {
+    return h.hash_32 == other.hash_32 && 
+           h.hash_64 == other.hash_64 && 
+           h.hash_128.low == other.hash_128.low && 
+           h.hash_128.high == other.hash_128.high
+}
+
+// Compare only 32-bit hash
+pub fn (h HashResult) equals_32(other HashResult) bool {
+    return h.hash_32 == other.hash_32
+}
+
+// Compare only 64-bit hash
+pub fn (h HashResult) equals_64(other HashResult) bool {
+    return h.hash_64 == other.hash_64
+}
+
+// Compare only 128-bit hash
+pub fn (h HashResult) equals_128(other HashResult) bool {
+    return h.hash_128.low == other.hash_128.low && 
+           h.hash_128.high == other.hash_128.high
+}
+
+// Alias for equals_128 for consistency with xxHash API
+pub fn (h HashResult) is_equal_128(other HashResult) bool {
+    return h.equals_128(other)
+}
+
+// Check if 128-bit hash is zero
+pub fn (h HashResult) is_zero_128() bool {
+    return h.hash_128.low == 0 && h.hash_128.high == 0
+}
+
+// Check if all hashes are zero
+pub fn (h HashResult) is_zero() bool {
+    return h.hash_32 == 0 && h.hash_64 == 0 && h.is_zero_128()
+}
+
+// Get 128-bit hash as combined hex string
+pub fn (h HashResult) hex_128() string {
+    return u64_to_hex(h.hash_128.high, 16) + u64_to_hex(h.hash_128.low, 16)
+}
+
+// String representation of all hash values
+pub fn (h HashResult) str() string {
+    return 'HashResult{32:0x${h.hash_32:x} 64:0x${h.hash_64:x} 128:0x${h.hash_128.high:x}${h.hash_128.low:x}}'
+}
+
+// Support == operator for HashResult
+pub fn (h HashResult) == (other HashResult) bool {
+    return h.is_equal(other)
 }
 
 // Create new XXHasher with specified algorithm and seed
@@ -320,4 +378,9 @@ pub fn xxh64_hash_hex_default(data []u8) string {
 
 pub fn xxh3_hash_hex_default(data []u8) string {
     return u64_to_hex(xxh3_hash(data, 0), 16)
+}
+
+// Get xxHash library version number
+pub fn xxh_version_number() u32 {
+    return C.XXH_versionNumber()
 }
